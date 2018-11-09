@@ -1,0 +1,44 @@
+---
+title: "Project Proposal"
+author: "Hassan Rahim Kamil (rahimka2), Weiliang Hu (whu17)"
+date: "11/5/2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Sentiment Analysis and Prediction of 2016 Elections based on Social Media
+
+***
+
+```{r libraries}
+
+library(stringr)
+library(magrittr)
+library(tm)
+require(NLP)
+library(tidytext)
+library(syuzhet)
+```
+
+```{r reading data, cache = T, echo = F}
+election = read.csv("election_day_tweets.csv")
+```
+
+```{r data structure, echo = F}
+
+str(election)
+summary(election)
+
+```
+
+## Introduction [link to data source](https://www.kaggle.com/kinguistics/election-day-tweets/kernels)
+
+On November 2016, the world witness yet another important election from one of the major economic superpowers: the United States. The results left many surprised.
+
+We obtained a dataset from [Kaggle](https://www.kaggle.com/kinguistics/election-day-tweets/kernels) that has 34 columns and 397629 rows.
+
+
+
+
+
