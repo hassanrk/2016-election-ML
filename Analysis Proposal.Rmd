@@ -1,5 +1,5 @@
 ---
-title: "Project Proposal"
+title: "Analysis Proposal"
 author: "Hassan Rahim Kamil (rahimka2), Weiliang Hu (whu17)"
 date: "11/5/2018"
 output:
@@ -11,34 +11,155 @@ output:
 
 ***
 
-```{r libraries}
-
-library(stringr)
-library(magrittr)
-library(tm)
-require(NLP)
-library(tidytext)
-library(syuzhet)
+```{r setup-chunk, message = FALSE, warning = FALSE, echo = F}
+pkg_list = c("stringr", "magrittr", "caret", "rpart.plot", "tm", "tidytext", "syuzhet", "MASS", "plotly")
+mia_pkgs = pkg_list[!(pkg_list %in% installed.packages()[,"Package"])]
+if(length(mia_pkgs) > 0) install.packages(mia_pkgs)
+loaded_pkgs = lapply(pkg_list, require, character.only=TRUE)
 ```
 
 ```{r reading data, cache = T, echo = F}
 election = read.csv("election_day_tweets.csv")
 ```
 
-```{r data structure, echo = F}
+```{r data structure, echo = F, results="hide"}
 
-str(election)
+str(election)                                                                                                                                                         
 summary(election)
+
+data(sentiments, package = "tidytext")
 
 ```
 
 ## Introduction [link to data source](https://www.kaggle.com/kinguistics/election-day-tweets/kernels)
 
-On November 2016, the world witness yet another important election from one of the major economic superpowers: the United States. The results left many surprised.
+On November 2016, the world witnessed yet another important election from one of the major economic superpowers: the United States. The results left many surprised.
 
-We obtained a dataset from [Kaggle](https://www.kaggle.com/kinguistics/election-day-tweets/kernels) that has 34 columns and 397629 rows.
-
-
+We obtained a dataset from [Kaggle](https://www.kaggle.com/kinguistics/election-day-tweets/kernels) that has 34 columns and 397629 rows. Each row represents a tweet on the election day according from the earliest timestamp to the latest. A brief description of the features:
 
 
+|            Variable           | Description                                                                                                                   |
+|:-----------------------------:|-------------------------------------------------------------------------------------------------------------------------------|
+|              text             | text of the tweet                                                                                                             |
+|           created_at          | date and time of the tweet (format yyyy-mm--dd hh:mm:ss)                                                                      |
+|              geo              | a JSON object containing coordinates [latitude, longitude] and a "type"                                                       |
+|              lang             | Twitter's guess as to the language of the tweet                                                                               |
+|             place             | a Place object from the Twitter API                                                                                           |
+|          coordinates          | a JSON object containing coordinates [longitude, latitude] and a `type'; note that coordinates are reversed from the geofield |
+|     user.favourites.count     | number of tweets the user has favorited                                                                                       |
+|      user.statuses_count      | number of statuses the user has posted                                                                                        |
+|        user.description       | the text of the user's profile description                                                                                    |
+|         user.location         | text of the user's profile location                                                                                           |
+|            user.id            | unique id for the user                                                                                                        |
+|        user.created_at        | when the user created their account                                                                                           |
+|         user.verified         | bool; is user verified?                                                                                                       |
+|         user.following        | bool; am I (Ed King - the data creator) following this user?                                                                  |
+|            user.url           | the URL that the user listed in their profile (not necessarily a link to their Twitter profile)                               |
+|       user.listed_count       | number of lists this user is on (?)                                                                                           |
+|      user.followers_count     | number of accounts that follow this user                                                                                      |
+|   user.default_profile_image  | bool; does the user use the default profile pic?                                                                              |
+|        user.utc_offset        | positive or negative distance from UTC, in seconds                                                                            |
+|       user.friends_count      | number of accounts this user follows                                                                                          |
+|      user.default_profile     | bool; does the user use the default profile?                                                                                  |
+|           user.name           | user's profile name                                                                                                           |
+|           user.lang           | user's default language                                                                                                       |
+|        user.screen_name       | user's account name                                                                                                           |
+|        user.geo_enabled       | bool; does user have geo enabled?                                                                                             |
+| user.profile_background_color | user's profile background color, as hex in format "RRGGBB" (no '#')                                                           |
+|     user.profile_image_url    | a link to the user's profile pic                                                                                              |
+|         user.time_zone        | full name of the user's time zone                                                                                             |
+|               id              | unique tweet ID                                                                                                               |
+|         favorite_count        | number of times the tweet has been favorited                                                                                  |
+|           retweeted           | bool; is this a retweet?                                                                                                      |
+|             source            | if a link, where is it from (e.g., "Instagram")                                                                               |
+|           favorited           | have I (Ed King - data creator) favorited this tweet?                                                                         |
+|         retweet_count         | number of times this tweet has been retweeted                                                                                 |
+
+***
+
+## Preliminary Analysis
+
+
+
+```{r}
+plot_ly(x = 1:61, y = 1:87, z = volcano, type = "heatmap")
+
+set.seed(123)
+
+x = 1:100
+y1 = 2*x + rnorm(100)
+y2 = -2*x + rnorm(100)
+
+axis_template = list(
+  showgrid = F,
+  zeroline = F,
+  nticks = 20,
+  showline = T,
+  title = "AXIS",
+  mirror = "all")
+
+plot_ly(
+  x = x,
+  y = y1,
+  type = "scatter") %>%
+  
+  layout(
+    xaxis = axis_template,
+    yaxis = axis_template)
+  
+
+plot_ly( x = c(1, 2, 3),
+         y = c(5, 6, 4),
+         type = "scatter",
+         mode = "markers")
+
+
+plot_ly(x = c(1, 2, 4), 
+        y = c(2, 3, 2),
+        type = "scatter",
+        mode = "markers",
+        marker = list(color = c("green", "blue", "red")))
+
+
+
+plot_ly(x = x,
+        y = y1, 
+        type = "scatter",
+        mode = "markers") %>%
+  add_trace( x = x,
+             y = y2) %>%
+  layout(
+    legend = list(x = 0.5, 
+                  y = 1,
+                  bgcolor = "#F3F3F3")
+  )
+
+```
+
+
+```{r}
+
+library(stringr)
+str_extract_all(election[, "text"], pattern = "#[:alnum:]+")
+
+
+library(plotly)
+plot_ly(mtcars, x = ~wt, y = ~hp, z = ~qsec,
+        marker = list(color = ~mpg, colorscale = c('#FFE1A1', '#683531'), showscale = TRUE)) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = 'Weight'),
+                     yaxis = list(title = 'Gross horsepower'),
+                     zaxis = list(title = '1/4 mile time')),
+         annotations = list(
+           x = 1.13,
+           y = 1.05,
+           text = 'Miles/(US) gallon',
+           xref = 'paper',
+           yref = 'paper',
+           showarrow = FALSE
+         ))
+
+
+
+```
 
