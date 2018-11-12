@@ -1,6 +1,7 @@
 ---
-title: "Analysis Proposal"
+title: "Analysis Proposal [Group: High Expectasians]"
 author: "Hassan Rahim Kamil (rahimka2), Weiliang Hu (whu17)"
+group: "High Expectasians"
 date: "11/5/2018"
 output:
   html_document:
@@ -8,6 +9,7 @@ output:
 ---
 
 # Sentiment Analysis and Prediction of 2016 Elections based on Social Media Posts
+
 
 ***
 
@@ -22,16 +24,6 @@ loaded_pkgs = lapply(pkg_list, require, character.only=TRUE)
 election = read.csv("election_day_tweets.csv")
 ```
 
-```{r data structure, echo = F, results="hide"}
-
-str(election)                                                                                                                                                         
-summary(election)
-
-data(sentiments, package = "tidytext")
-
-table(election[, "lang"])
-
-```
 
 ## Introduction [link to data source](https://www.kaggle.com/kinguistics/election-day-tweets/kernels)
 
@@ -112,6 +104,7 @@ E-->N[Principal Component Analysis]
 ")
 
 ```
+
 `Reference`: [KDNuggets](https://www.kdnuggets.com/2018/03/5-things-sentiment-analysis-classification.html)
 
 
@@ -123,39 +116,38 @@ Some **important** packages that we **may** use for this project:
 tm :                
 An R package that is useful for text mining purposes and analyzing corpus objects (such as finding associations, frequencies, etc.)
 
-SentimentAnalysis:  
+SentimentAnalysis :  
 An R package that is popular in sentiment analyses. Has built-in dictionaries (Harvard-IV dictionary, Henry’s Financial dictionary, and Loughran-McDonald Financial dictionary) that list each word with its associated sentiment scores.
 
-syuzhet, tidytext: 
+syuzhet, tidytext : 
 Supplementary R packages for sentiment analysis.
 
-caret:            
+caret :            
 A popular Machine Learning R package that enables the use of common supervised and unsupervised methods.
 
-MASS:            
+MASS :            
 An R package that enables the use of several famous statistical approaches like penalized regressions on matrices.
 
-stringr:          
+stringr :          
 An R package that incorporates Regular Expression (regex) the enables the manipulation of character objects.
 
-plotly, ggplot2:  
+plotly, ggplot2 :  
 R packages for visualization.
 
-magrittr:
+magrittr :
 An R package for pipelining.
 
-Shiny:
+Shiny :
 An R package for interactive data exploration.
 
 
 ```
 
-Of course, there will be some common R packages that we will or may be using like `dplyr`, `purrr` or `readxl` that are not mentioned in the list. Our plan 
+Of course, there will be some common R packages that we will or may be using like `dplyr`, `purrr` or `readxl` that are not mentioned in the list. 
 
 ### Lexicon-based Approach
 
 In sentiment analysis, the lexicon-based approach can be seen as a "nonparametric" statistical approach to meta- or unstructured data. Traditionally, the *Dictionary-based Approach* is seen as the "easier" method in comparison to the *Corpus-based Approach*. The former method uses a predefined list of "sentiment scores" from the English dictionaries to sentimental words such as "angry" (with a score of <span style="color:red">-3</span>) and "happy" (with a score of <span style="color:red">3</span>) by first getting rid of common stop words in a text data. Commonly, the scores are then aggregated before classifying the text as "negative", "neutral", or "positive". 
-
 
 
 ```{r lexicon based approach, echo = F, warning = F}
@@ -197,7 +189,7 @@ word.count
 
 The above approach uses the *Dictionary-based Approach` mentioned to analyze the word count of the 6 different Jane Austen novels.
 
-On the other hand, the *Corpus-based Approach* investigates the polarity of the text by using ML methods. This method relies on the context of the context or domain that can inform the sentiment labels of our text data.
+On the other hand, the *Corpus-based Approach* investigates the polarity of the text by using ML methods. This method relies on the context or domain that can inform the sentiment labels of our text data.
 
 ```{r tm package, echo = F}
 
@@ -273,7 +265,7 @@ PCbiplot(fit)
 
 `Code Reference`: [Stackoverflow](https://stackoverflow.com/questions/6578355/plotting-pca-biplot-with-ggplot2)
 
-The challenge that we will face here is since we will be assigning the text variables into some columns of binary value, calculating the dissimilarity matrices may be difficult. After choosing the dimensions of the data, we will attempt to perform some common unsupervised and supervised learning methods to analyze the polarity of the texts. For that, we will be using the methods that we learned in class.
+The challenge that we will face here is since we will be assigning the text variables into some columns of binary value, calculating the dissimilarity matrices may be difficult. After choosing the dimensions of the data, we will attempt to perform some common unsupervised and supervised learning methods to analyze the polarity of the texts. For that, we will be using the methods that we learned in class, like *discriminant analyses*, *kernel-based methods*, *k-means* or *hierarchical clustering*, and such. The idea is to compare and contrast the efficacy of each method on our dataset.
 
 ### Predicting Election Results
 
@@ -296,7 +288,7 @@ Since we will be using a dataset that has many dimensions, visualizing them migh
 ```{r plotly 1, echo = F}
 
 kd = with(MASS::geyser, MASS::kde2d(duration, waiting, n = 50))
-plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface() %>% layout(title = "Geyser Surface Visualization with plotly")
+plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface() %>% layout(title = "Geyser Surface Visualization of Waiting Time with plotly")
 
 
 ```
@@ -308,8 +300,11 @@ Also, to provide a more crisp and modern look to data visualizations, we will be
 
 3) **Data merging**
 
-Using this dataset alone to predicition the elections results may not be realistic. Afterall, more often than not, relying on sentiments alone often fall short in an argument. Due to that, we may be using some packages, like `rvest` or `twitteR`, to webscrape some of the further needed information like manifestos, state laws and size of constituencies. This will take a long time.
+Using this dataset alone to predict the election results may not be realistic. Afterall, more often than not, relying on sentiments alone often fall short in an argument. Due to that, we may be using some packages, like `rvest` or `twitteR`, to webscrape some of the further needed information like manifestos, state laws and size of constituencies. This will take a long time.
 
+***
 
+## Conclusion 
 
+Ideally, by utilizing methods within and outside the scope of Stat 432 course, this project will tell us how people's tweet opinions from the United States relate to the outcome of the country's most important election in 2016. We gratefully appreciate any guidance and suggestions from the instructor/TAs.
 
