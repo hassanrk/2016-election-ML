@@ -7,12 +7,12 @@ output:
     df_print: paged
 ---
 
-# Sentiment Analysis and Prediction of 2016 Elections based on Social Media
+# Sentiment Analysis and Prediction of 2016 Elections based on Social Media Posts
 
 ***
 
 ```{r setup-chunk, message = FALSE, warning = FALSE, echo = F}
-pkg_list = c("stringr", "magrittr", "caret", "rpart.plot", "tm", "tidytext", "syuzhet", "MASS", "plotly")
+pkg_list = c("stringr", "magrittr", "caret", "rpart.plot", "tm", "tidytext", "syuzhet", "MASS", "plotly", "DiagrammeR", "dplyr", "janeaustenr", "iemisctext", "randomForest", "broom", "tidyverse", "irlba", "ggthemes")
 mia_pkgs = pkg_list[!(pkg_list %in% installed.packages()[,"Package"])]
 if(length(mia_pkgs) > 0) install.packages(mia_pkgs)
 loaded_pkgs = lapply(pkg_list, require, character.only=TRUE)
@@ -28,6 +28,8 @@ str(election)
 summary(election)
 
 data(sentiments, package = "tidytext")
+
+table(election[, "lang"])
 
 ```
 
@@ -73,93 +75,241 @@ We obtained a dataset from [Kaggle](https://www.kaggle.com/kinguistics/election-
 |           retweeted           | bool; is this a retweet?                                                                                                      |
 |             source            | if a link, where is it from (e.g., "Instagram")                                                                               |
 |           favorited           | have I (Ed King - data creator) favorited this tweet?                                                                         |
-|         retweet_count         | number of times this tweet has been retweeted                                                                                 |
+|         retweet_count         | number of times this tweet has been retweeted         |
+
+The first five observations are as below:
+```{r first several observations, echo = F}
+
+head(election, 5)
+
+```
+
+The dataset is webscraped from Twitter by [Ed King](https://twitter.com/poptimality), a user by the user name of `poptimality`, to uncover some patterns from the election day (November 11 2016). 
+
+*** 
+
+## Methodology
+
+```{r diagram, echo = F}
+
+mermaid("
+graph LR
+A((Sentiment Analysis))-->B{Statistical Learning Approach}
+A-->C{Lexicon-based Approach}
+B-->D(Supervised Learning)
+B-->E(Unsupervised Learning)
+C-->F(Dictionary-based Approach)
+C-->G(Corpus-based Approach)
+D-->H[Discriminant Analysis]
+D-->I[K-Nearest Neighbors]
+D-->J[Naive Bayes]
+D-->K[Kernel Methods]
+E-->L[K-Means Clustering]
+E-->M[Hierarchical Clustering]
+E-->N[Principal Component Analysis]
+
+
+")
+
+```
+`Reference`: [KDNuggets](https://www.kdnuggets.com/2018/03/5-things-sentiment-analysis-classification.html)
+
+
+For this group project, our general approach is to compare which methods work best for this dataset by utilizing the statistical learning methods we learned in class and the common machine learning algorithms (noted by the `Lexicon-based Approach`) for analyzing large texts data.
+
+Some **important** packages that we **may** use for this project:
+
+```
+tm :                
+An R package that is useful for text mining purposes and analyzing corpus objects (such as finding associations, frequencies, etc.)
+
+SentimentAnalysis:  
+An R package that is popular in sentiment analyses. Has built-in dictionaries (Harvard-IV dictionary, Henry’s Financial dictionary, and Loughran-McDonald Financial dictionary) that list each word with its associated sentiment scores.
+
+syuzhet, tidytext: 
+Supplementary R packages for sentiment analysis.
+
+caret:            
+A popular Machine Learning R package that enables the use of common supervised and unsupervised methods.
+
+MASS:            
+An R package that enables the use of several famous statistical approaches like penalized regressions on matrices.
+
+stringr:          
+An R package that incorporates Regular Expression (regex) the enables the manipulation of character objects.
+
+plotly, ggplot2:  
+R packages for visualization.
+
+magrittr:
+An R package for pipelining.
+
+Shiny:
+An R package for interactive data exploration.
+
+
+```
+
+Of course, there will be some common R packages that we will or may be using like `dplyr`, `purrr` or `readxl` that are not mentioned in the list. Our plan 
+
+### Lexicon-based Approach
+
+In sentiment analysis, the lexicon-based approach can be seen as a "nonparametric" statistical approach to meta- or unstructured data. Traditionally, the *Dictionary-based Approach* is seen as the "easier" method in comparison to the *Corpus-based Approach*. The former method uses a predefined list of "sentiment scores" from the English dictionaries to sentimental words such as "angry" (with a score of <span style="color:red">-3</span>) and "happy" (with a score of <span style="color:red">3</span>) by first getting rid of common stop words in a text data. Commonly, the scores are then aggregated before classifying the text as "negative", "neutral", or "positive". 
+
+
+
+```{r lexicon based approach, echo = F, warning = F}
+
+original_books = austen_books() %>%
+  group_by(book) %>%
+  mutate(line = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+                                                 ignore_case = TRUE)))) %>%
+  ungroup()
+
+bing = get_sentiments("bing")
+
+tidy_books = original_books %>%
+  unnest_tokens(word, text)
+
+bing_word_counts = tidy_books %>%
+  inner_join(bing) %>%
+  count(word, sentiment, sort = TRUE)
+
+word.count = bing_word_counts %>%
+  filter(n > 150) %>%
+  mutate(n = ifelse(sentiment == "negative", -n, n)) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col() +
+  coord_flip() +
+  labs(y = "Contribution to sentiment")
+
+```
+
+```{r lexicon}
+
+word.count
+
+```
+
+`Code Reference`: Silge & Robinson, [tidytext](https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html)
+
+The above approach uses the *Dictionary-based Approach` mentioned to analyze the word count of the 6 different Jane Austen novels.
+
+On the other hand, the *Corpus-based Approach* investigates the polarity of the text by using ML methods. This method relies on the context of the context or domain that can inform the sentiment labels of our text data.
+
+```{r tm package, echo = F}
+
+data(anarchy)
+a = DocumentTermMatrix(anarchy)
+
+Zipf_plot(a)
+title("Anarchy Data")
+
+```
+
+`Code Reference`: Embry, [tm](https://cran.r-project.org/web/packages/iemisctext/vignettes/Analysis-using-tm-vignette.html)
+
+A method (from the `tm` package) in *Corpus-based Approach* is as above. By Zipf's Law, it is stated that the frequency of a word is inversely proportional to its statistical rank. The following two plots also follow the same law.
+
+```{r, echo = F}
+
+data(war_prayer)
+data(war_racket)
+
+wp = DocumentTermMatrix(war_prayer)
+wr = DocumentTermMatrix(war_racket)
+
+par(mfrow = c(1, 2))
+Zipf_plot(wp)
+title("War Prayer data")
+
+Zipf_plot(wr)
+title("War Racket data")
+
+
+
+```
+
+`Code Reference`: Embry, [tm](https://cran.r-project.org/web/packages/iemisctext/vignettes/Analysis-using-tm-vignette.html)
+
+Here, from the context of the corpus data, we could attempt to assign the sentiment labels.
+
+
+### Statistical Learning Approach
+
+The statistical learning approach concerns about assigning and verifying labels (and some other useful ideas like dimensionality reduction, which could potentially reduce computation time when dealing with large datasets such as ours). Our concern in this analysis is how we nonparametrically assign sentiment labels without the help of a label response. 
+
+Our first approach might be to reduce the sheer number of dimensions of the text column by performing a PCA. This will help in reducing the computation time and prevent the problem of the 'curse of dimensionality' by picking only the useful dimensions. A biplot might be useful for this:
+
+```{r biplot example, echo = F}
+
+fit = princomp(USArrests, cor=TRUE)
+
+PCbiplot <- function(PC, x="PC1", y="PC2") {
+    # PC being a prcomp object
+    data <- data.frame(obsnames=row.names(PC$x), PC$x)
+    plot <- ggplot(data, aes_string(x=x, y=y)) + geom_text(alpha=.4, size=3, aes(label=obsnames))
+    plot <- plot + geom_hline(aes(yintercept = 0), size=.2) + geom_vline(aes(xintercept = 0), size=.2) + ggtitle("Biplot with USArrests data") + theme_minimal()
+    datapc <- data.frame(varnames=rownames(PC$rotation), PC$rotation)
+    mult <- min(
+        (max(data[,y]) - min(data[,y])/(max(datapc[,y])-min(datapc[,y]))),
+        (max(data[,x]) - min(data[,x])/(max(datapc[,x])-min(datapc[,x])))
+        )
+    datapc <- transform(datapc,
+            v1 = .7 * mult * (get(x)),
+            v2 = .7 * mult * (get(y))
+            )
+    plot <- plot + coord_equal() + geom_text(data=datapc, aes(x=v1, y=v2, label=varnames), size = 5, vjust=1, color="blue")
+    plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="purple")
+    plot
+}
+
+fit = prcomp(USArrests, scale=T)
+PCbiplot(fit)
+
+```
+
+`Code Reference`: [Stackoverflow](https://stackoverflow.com/questions/6578355/plotting-pca-biplot-with-ggplot2)
+
+The challenge that we will face here is since we will be assigning the text variables into some columns of binary value, calculating the dissimilarity matrices may be difficult. After choosing the dimensions of the data, we will attempt to perform some common unsupervised and supervised learning methods to analyze the polarity of the texts. For that, we will be using the methods that we learned in class.
+
+### Predicting Election Results
+
+After assigning the labels of each tweet, we will be using them to predict the election results by first determining the frequencies of the sentiment labels by electoral district to predict the election results in 2016. For that, we may come across some difficulties and potential bias, which will be explained in the next section of our proposal.
 
 ***
 
-## Preliminary Analysis
+## Challenges
 
+For brevity and simplicity, we will present the **possible** challenges when undertaking this project in bullet points.
 
+1) **The dataset**
 
-```{r}
-plot_ly(x = 1:61, y = 1:87, z = volcano, type = "heatmap")
+Our dataset has 34 columns and 397629 rows, with `text` being the feature of most interest. Due to that, data cleaning may be a problem, especially when there are many stopwords in the data, which may render some of the observations useless. Furthermore, upon further analysis, we found out that only 338331 are in English language, of which we have not yet considered which observations are located in the United States (given the fact that many users did not enable geolocation). Also, the dataset is only from the date [11/08/16](https://www.google.com/search?ei=VProW9eUGMXWjwS6iKf4BQ&q=election+2016+date&oq=election+2016+date&gs_l=psy-ab.3..0j0i22i30l9.2024.3079..3227...2.0..0.96.580.7......0....1..gws-wiz.......0i71j35i39j0i67j0i22i10i30j0i13j0i13i30j0i13i5i30.ezMfNPrC5c0) , which may introduce some bias and inaccuracy on the prediction result. Since our ultimate goal is to predict the election results and that **only** United States citizens can vote, this challenge may prevent our group to accurately predict them, which will probably be seen later on our confusion matrix. However, if based on depth of analysis, our group may be relatively well on the good side.
 
-set.seed(123)
+2) **Data visualization**
 
-x = 1:100
-y1 = 2*x + rnorm(100)
-y2 = -2*x + rnorm(100)
+Since we will be using a dataset that has many dimensions, visualizing them might be a problem. Due to that, our group decided to use the package `plotly` (whenever feasible) since it has a feature that allows us to visualize a 3d plot.
 
-axis_template = list(
-  showgrid = F,
-  zeroline = F,
-  nticks = 20,
-  showline = T,
-  title = "AXIS",
-  mirror = "all")
+```{r plotly 1, echo = F}
 
-plot_ly(
-  x = x,
-  y = y1,
-  type = "scatter") %>%
-  
-  layout(
-    xaxis = axis_template,
-    yaxis = axis_template)
-  
-
-plot_ly( x = c(1, 2, 3),
-         y = c(5, 6, 4),
-         type = "scatter",
-         mode = "markers")
-
-
-plot_ly(x = c(1, 2, 4), 
-        y = c(2, 3, 2),
-        type = "scatter",
-        mode = "markers",
-        marker = list(color = c("green", "blue", "red")))
-
-
-
-plot_ly(x = x,
-        y = y1, 
-        type = "scatter",
-        mode = "markers") %>%
-  add_trace( x = x,
-             y = y2) %>%
-  layout(
-    legend = list(x = 0.5, 
-                  y = 1,
-                  bgcolor = "#F3F3F3")
-  )
-
-```
-
-
-```{r}
-
-library(stringr)
-str_extract_all(election[, "text"], pattern = "#[:alnum:]+")
-
-
-library(plotly)
-plot_ly(mtcars, x = ~wt, y = ~hp, z = ~qsec,
-        marker = list(color = ~mpg, colorscale = c('#FFE1A1', '#683531'), showscale = TRUE)) %>%
-  add_markers() %>%
-  layout(scene = list(xaxis = list(title = 'Weight'),
-                     yaxis = list(title = 'Gross horsepower'),
-                     zaxis = list(title = '1/4 mile time')),
-         annotations = list(
-           x = 1.13,
-           y = 1.05,
-           text = 'Miles/(US) gallon',
-           xref = 'paper',
-           yref = 'paper',
-           showarrow = FALSE
-         ))
-
+kd = with(MASS::geyser, MASS::kde2d(duration, waiting, n = 50))
+plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface() %>% layout(title = "Geyser Surface Visualization with plotly")
 
 
 ```
+
+`Code Reference`: [plotly](https://plot.ly/r/3d-surface-plots/)
+
+Also, to provide a more crisp and modern look to data visualizations, we will be using `plotly` and `Shiny` for better data exploration.
+
+
+3) **Data merging**
+
+Using this dataset alone to predicition the elections results may not be realistic. Afterall, more often than not, relying on sentiments alone often fall short in an argument. Due to that, we may be using some packages, like `rvest` or `twitteR`, to webscrape some of the further needed information like manifestos, state laws and size of constituencies. This will take a long time.
+
+
+
 
