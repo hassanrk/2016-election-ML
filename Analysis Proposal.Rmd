@@ -1,310 +1,228 @@
 ---
 title: "Analysis Proposal [Group: High Expectasians]"
 author: "Hassan Rahim Kamil (rahimka2), Weiliang Hu (whu17)"
-group: "High Expectasians"
 date: "11/5/2018"
 output:
   html_document:
     df_print: paged
 ---
 
-# Sentiment Analysis and Prediction of 2016 Elections based on Social Media Posts
-
+# Sentiment Analysis of Trump's and Clinton's 2016 Tweets and Predicting Public Opinions
 
 ***
 
 ```{r setup-chunk, message = FALSE, warning = FALSE, echo = F}
-pkg_list = c("stringr", "magrittr", "caret", "rpart.plot", "tm", "tidytext", "syuzhet", "MASS", "plotly", "DiagrammeR", "dplyr", "janeaustenr", "iemisctext", "randomForest", "broom", "tidyverse", "irlba", "ggthemes")
+pkg_list = c("tidyverse", "caret", "MASS", "tm", "tidytext", "syuzhet", "rtweet", "twitteR", "SnowballC", "devtools", "gtrendsR", "jsonlite", "rpart.plot", "pollstR", "RSentiment", "broom")
 mia_pkgs = pkg_list[!(pkg_list %in% installed.packages()[,"Package"])]
 if(length(mia_pkgs) > 0) install.packages(mia_pkgs)
 loaded_pkgs = lapply(pkg_list, require, character.only=TRUE)
 ```
 
 ```{r reading data, cache = T, echo = F}
-election = read.csv("election_day_tweets.csv")
-```
+tweets = read.csv("tweets.csv") 
+polls = read.csv("presidential_polls.csv")
 
-
-## Introduction [link to data source](https://www.kaggle.com/kinguistics/election-day-tweets/kernels)
-
-On November 2016, the world witnessed yet another important election from one of the major economic superpowers: the United States. The results left many surprised.
-
-We obtained a dataset from [Kaggle](https://www.kaggle.com/kinguistics/election-day-tweets/kernels) that has 34 columns and 397629 rows. Each row represents a tweet on the election day according from the earliest timestamp to the latest. A brief description of the features:
-
-
-|            Variable           | Description                                                                                                                   |
-|:-----------------------------:|-------------------------------------------------------------------------------------------------------------------------------|
-|              text             | text of the tweet                                                                                                             |
-|           created_at          | date and time of the tweet (format yyyy-mm--dd hh:mm:ss)                                                                      |
-|              geo              | a JSON object containing coordinates [latitude, longitude] and a "type"                                                       |
-|              lang             | Twitter's guess as to the language of the tweet                                                                               |
-|             place             | a Place object from the Twitter API                                                                                           |
-|          coordinates          | a JSON object containing coordinates [longitude, latitude] and a `type'; note that coordinates are reversed from the geofield |
-|     user.favourites.count     | number of tweets the user has favorited                                                                                       |
-|      user.statuses_count      | number of statuses the user has posted                                                                                        |
-|        user.description       | the text of the user's profile description                                                                                    |
-|         user.location         | text of the user's profile location                                                                                           |
-|            user.id            | unique id for the user                                                                                                        |
-|        user.created_at        | when the user created their account                                                                                           |
-|         user.verified         | bool; is user verified?                                                                                                       |
-|         user.following        | bool; am I (Ed King - the data creator) following this user?                                                                  |
-|            user.url           | the URL that the user listed in their profile (not necessarily a link to their Twitter profile)                               |
-|       user.listed_count       | number of lists this user is on (?)                                                                                           |
-|      user.followers_count     | number of accounts that follow this user                                                                                      |
-|   user.default_profile_image  | bool; does the user use the default profile pic?                                                                              |
-|        user.utc_offset        | positive or negative distance from UTC, in seconds                                                                            |
-|       user.friends_count      | number of accounts this user follows                                                                                          |
-|      user.default_profile     | bool; does the user use the default profile?                                                                                  |
-|           user.name           | user's profile name                                                                                                           |
-|           user.lang           | user's default language                                                                                                       |
-|        user.screen_name       | user's account name                                                                                                           |
-|        user.geo_enabled       | bool; does user have geo enabled?                                                                                             |
-| user.profile_background_color | user's profile background color, as hex in format "RRGGBB" (no '#')                                                           |
-|     user.profile_image_url    | a link to the user's profile pic                                                                                              |
-|         user.time_zone        | full name of the user's time zone                                                                                             |
-|               id              | unique tweet ID                                                                                                               |
-|         favorite_count        | number of times the tweet has been favorited                                                                                  |
-|           retweeted           | bool; is this a retweet?                                                                                                      |
-|             source            | if a link, where is it from (e.g., "Instagram")                                                                               |
-|           favorited           | have I (Ed King - data creator) favorited this tweet?                                                                         |
-|         retweet_count         | number of times this tweet has been retweeted         |
-
-The first five observations are as below:
-```{r first several observations, echo = F}
-
-head(election, 5)
+hillary = read.csv("hillary-tweets.csv", header = T, sep = ">")
+trump = fromJSON("trump-tweets.json")
 
 ```
 
-The dataset is webscraped from Twitter by [Ed King](https://twitter.com/poptimality), a user by the user name of `poptimality`, to uncover some patterns from the election day (November 11 2016). 
-
-*** 
-
-## Methodology
-
-```{r diagram, echo = F}
-
-mermaid("
-graph LR
-A((Sentiment Analysis))-->B{Statistical Learning Approach}
-A-->C{Lexicon-based Approach}
-B-->D(Supervised Learning)
-B-->E(Unsupervised Learning)
-C-->F(Dictionary-based Approach)
-C-->G(Corpus-based Approach)
-D-->H[Discriminant Analysis]
-D-->I[K-Nearest Neighbors]
-D-->J[Naive Bayes]
-D-->K[Kernel Methods]
-E-->L[K-Means Clustering]
-E-->M[Hierarchical Clustering]
-E-->N[Principal Component Analysis]
 
 
-")
+## Introduction 
 
+Microblogging is becoming more and more commonplace among today's generation. In fact, interactions with some type of online platforms or service such as Facebook, Twitter or Google leave traces of data that show a record of behavior or actions. As Davidowitz put it in his book *Everybody Lies*: "The everyday act of typing a word or phrase into a compact, rectangular white box leaves a small trace of truth that, when multiplied by millions, eventually reveals profound realities." To statisticians, this quote faintly reminds of the many statistical ideas that could be put to the test.
+
+An emerging role of online platforms has been in the political context. As such, our research topic would be to predict political outcomes with a preferred dataset that is in line with our hypothesis and allows us to scientifically control for many variable.
+
+> Hypothesis: We could use sentiments on social media to predict public opinions as a proxy for political outcomes.
+
+The scope of the preferred dataset(s) that we are looking into include observations 
+
+- whose geolocations match those of the political outcomes of interest.
+- represent the voter base. And;
+- are longitudinal. 
+
+According to [Google Trends](https://trends.google.com/trends/story/election2016), the keywords most searched on Google during the 2016 election are "Abortion", "Immigration", "Race Issues", "Economy", "Affordable Care Act", "ISIS", "Climate Change", "National Debt", "Gun Control" and "Voting System." Using `gtrendsR`, we randomly picked five of those keywords and queried its search hits by setting `geo = "US"` to prevent bias.
+
+```{r trend 1, cache = T, warning = F}
+trend1 = gtrends(c("immigration", "abortion", "economy", "gun control", "terrorism"), geo = "US", time = "2016-01-01 2016-12-31")
+
+plot(trend1)
 ```
 
-`Reference`: [KDNuggets](https://www.kdnuggets.com/2018/03/5-things-sentiment-analysis-classification.html)
+Lo and behold, the trends do not differ much when we queried for Trump and Hillary.
 
+```{r trend 2, cache = T}
+trend2 = gtrends(c("hillary", "trump"), geo = "US", time = "2016-01-01 2016-12-31")
 
-For this group project, our general approach is to compare which methods work best for this dataset by utilizing the statistical learning methods we learned in class and the common machine learning algorithms (noted by the `Lexicon-based Approach`) for analyzing large texts data.
-
-Some **important** packages that we **may** use for this project:
-
+plot(trend2)
 ```
-tm :                
-An R package that is useful for text mining purposes and analyzing corpus objects (such as finding associations, frequencies, etc.)
 
-SentimentAnalysis :  
-An R package that is popular in sentiment analyses. Has built-in dictionaries (Harvard-IV dictionary, Henry’s Financial dictionary, and Loughran-McDonald Financial dictionary) that list each word with its associated sentiment scores.
+The trends are calculated on a weekly basis. How these trends are calculated can be viewed [here](https://support.google.com/trends/answer/4365533?hl=en). We see that these trends look more similar around mid-campaign.
 
-syuzhet, tidytext : 
-Supplementary R packages for sentiment analysis.
+Another popular measure of public opinions are by using polls. To that end, we queried [HuffPost Pollster](https://elections.huffingtonpost.com/pollster), a poll that aggregates every poll that claims to represent the population using `pollstR`.
 
-caret :            
-A popular Machine Learning R package that enables the use of common supervised and unsupervised methods.
-
-MASS :            
-An R package that enables the use of several famous statistical approaches like penalized regressions on matrices.
-
-stringr :          
-An R package that incorporates Regular Expression (regex) the enables the manipulation of character objects.
-
-plotly, ggplot2 :  
-R packages for visualization.
-
-magrittr :
-An R package for pipelining.
-
-Shiny :
-An R package for interactive data exploration.
+```{r pollster, eval = F}
+slug = "2016-general-election-trump-vs-clinton"
+polls = pollster_charts_polls(slug) %>% .[["content"]]
 
 
 ```
 
-Of course, there will be some common R packages that we will or may be using like `dplyr`, `purrr` or `readxl` that are not mentioned in the list. 
 
-### Lexicon-based Approach
+We hypothesize that these trends are invoked by the use of sentiments from both political candidates during their campaigns either through speech or social media. Using the trends as the labels and the sentiments as the features, we could attempt to build a model to find out their interactions.
 
-In sentiment analysis, the lexicon-based approach can be seen as a "nonparametric" statistical approach to meta- or unstructured data. Traditionally, the *Dictionary-based Approach* is seen as the "easier" method in comparison to the *Corpus-based Approach*. The former method uses a predefined list of "sentiment scores" from the English dictionaries to sentimental words such as "angry" (with a score of <span style="color:red">-3</span>) and "happy" (with a score of <span style="color:red">3</span>) by first getting rid of common stop words in a text data. Commonly, the scores are then aggregated before classifying the text as "negative", "neutral", or "positive". 
+Some packages that we **may** use for this project:
 
+```
+tidyverse: 
+A collection of R packages designed for data science. Useful for reading, wrangling and visualizing data.
 
-```{r lexicon based approach, echo = F, warning = F}
+caret:
+A package to execute ML algorithms in R.
 
-original_books = austen_books() %>%
-  group_by(book) %>%
-  mutate(line = row_number(),
-         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
-                                                 ignore_case = TRUE)))) %>%
-  ungroup()
+MASS:
+A package that has functions and datasets to support Venables and Ripley, "Modern Applied Statistics with S" (4th edition, 2002).
 
-bing = get_sentiments("bing")
+tm: 
+A package for text mining.
 
-tidy_books = original_books %>%
-  unnest_tokens(word, text)
+gtrendsR:
+A package to query Google Trends.
 
-bing_word_counts = tidy_books %>%
-  inner_join(bing) %>%
-  count(word, sentiment, sort = TRUE)
+pollstR:
+A package to query Huffpost Pollster.
 
-word.count = bing_word_counts %>%
-  filter(n > 150) %>%
-  mutate(n = ifelse(sentiment == "negative", -n, n)) %>%
-  mutate(word = reorder(word, n)) %>%
-  ggplot(aes(word, n, fill = sentiment)) +
-  geom_col() +
-  coord_flip() +
-  labs(y = "Contribution to sentiment")
+syuzhet, tidytext, RSentiment, SentimentAnalysis:
+A collection of packages for sentiment analysis.
+
+rtweet, TwitteR:
+Packages to scrape from Twitter API.
 
 ```
 
-```{r lexicon}
-
-word.count
-
-```
-
-`Code Reference`: Silge & Robinson, [tidytext](https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html)
-
-The above approach uses the *Dictionary-based Approach` mentioned to analyze the word count of the 6 different Jane Austen novels.
-
-On the other hand, the *Corpus-based Approach* investigates the polarity of the text by using ML methods. This method relies on the context or domain that can inform the sentiment labels of our text data.
-
-```{r tm package, echo = F}
-
-data(anarchy)
-a = DocumentTermMatrix(anarchy)
-
-Zipf_plot(a)
-title("Anarchy Data")
-
-```
-
-`Code Reference`: Embry, [tm](https://cran.r-project.org/web/packages/iemisctext/vignettes/Analysis-using-tm-vignette.html)
-
-A method (from the `tm` package) in *Corpus-based Approach* is as above. By Zipf's Law, it is stated that the frequency of a word is inversely proportional to its statistical rank. The following two plots also follow the same law.
-
-```{r, echo = F}
-
-data(war_prayer)
-data(war_racket)
-
-wp = DocumentTermMatrix(war_prayer)
-wr = DocumentTermMatrix(war_racket)
-
-par(mfrow = c(1, 2))
-Zipf_plot(wp)
-title("War Prayer data")
-
-Zipf_plot(wr)
-title("War Racket data")
-
-
-
-```
-
-`Code Reference`: Embry, [tm](https://cran.r-project.org/web/packages/iemisctext/vignettes/Analysis-using-tm-vignette.html)
-
-Here, from the context of the corpus data, we could attempt to assign the sentiment labels.
-
-
-### Statistical Learning Approach
-
-The statistical learning approach concerns about assigning and verifying labels (and some other useful ideas like dimensionality reduction, which could potentially reduce computation time when dealing with large datasets such as ours). Our concern in this analysis is how we nonparametrically assign sentiment labels without the help of a label response. 
-
-Our first approach might be to reduce the sheer number of dimensions of the text column by performing a PCA. This will help in reducing the computation time and prevent the problem of the 'curse of dimensionality' by picking only the useful dimensions. A biplot might be useful for this:
-
-```{r biplot example, echo = F}
-
-fit = princomp(USArrests, cor=TRUE)
-
-PCbiplot <- function(PC, x="PC1", y="PC2") {
-    # PC being a prcomp object
-    data <- data.frame(obsnames=row.names(PC$x), PC$x)
-    plot <- ggplot(data, aes_string(x=x, y=y)) + geom_text(alpha=.4, size=3, aes(label=obsnames))
-    plot <- plot + geom_hline(aes(yintercept = 0), size=.2) + geom_vline(aes(xintercept = 0), size=.2) + ggtitle("Biplot with USArrests data") + theme_minimal()
-    datapc <- data.frame(varnames=rownames(PC$rotation), PC$rotation)
-    mult <- min(
-        (max(data[,y]) - min(data[,y])/(max(datapc[,y])-min(datapc[,y]))),
-        (max(data[,x]) - min(data[,x])/(max(datapc[,x])-min(datapc[,x])))
-        )
-    datapc <- transform(datapc,
-            v1 = .7 * mult * (get(x)),
-            v2 = .7 * mult * (get(y))
-            )
-    plot <- plot + coord_equal() + geom_text(data=datapc, aes(x=v1, y=v2, label=varnames), size = 5, vjust=1, color="blue")
-    plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="purple")
-    plot
-}
-
-fit = prcomp(USArrests, scale=T)
-PCbiplot(fit)
-
-```
-
-`Code Reference`: [Stackoverflow](https://stackoverflow.com/questions/6578355/plotting-pca-biplot-with-ggplot2)
-
-The challenge that we will face here is since we will be assigning the text variables into some columns of binary value, calculating the dissimilarity matrices may be difficult. After choosing the dimensions of the data, we will attempt to perform some common unsupervised and supervised learning methods to analyze the polarity of the texts. For that, we will be using the methods that we learned in class, like *discriminant analyses*, *kernel-based methods*, *k-means* or *hierarchical clustering*, and such. The idea is to compare and contrast the efficacy of each method on our dataset.
-
-### Predicting Election Results
-
-After assigning the labels of each tweet, we will be using them to predict the election results by first determining the frequencies of the sentiment labels by electoral district to predict the election results in 2016. For that, we may come across some difficulties and potential bias, which will be explained in the next section of our proposal.
 
 ***
 
-## Challenges
+## Method/ Approach/ Design
 
-For brevity and simplicity, we will present the **possible** challenges when undertaking this project in bullet points.
+For demonstration of the methods that we plan to use: 
 
-1) **The dataset**
+#### 1) Scraping Twitter API and Cleaning Data
 
-Our dataset has 34 columns and 397629 rows, with `text` being the feature of most interest. Due to that, data cleaning may be a problem, especially when there are many stopwords in the data, which may render some of the observations useless. Furthermore, upon further analysis, we found out that only 338331 are in English language, of which we have not yet considered which observations are located in the United States (given the fact that many users did not enable geolocation). Also, the dataset is only from the date [11/08/16](https://www.google.com/search?ei=VProW9eUGMXWjwS6iKf4BQ&q=election+2016+date&oq=election+2016+date&gs_l=psy-ab.3..0j0i22i30l9.2024.3079..3227...2.0..0.96.580.7......0....1..gws-wiz.......0i71j35i39j0i67j0i22i10i30j0i13j0i13i30j0i13i5i30.ezMfNPrC5c0) , which may introduce some bias and inaccuracy on the prediction result. Since our ultimate goal is to predict the election results and that **only** United States citizens can vote, this challenge may prevent our group to accurately predict them, which will probably be seen later on our confusion matrix. However, if based on depth of analysis, our group may be relatively well on the good side.
+As observed from the trends, we plan to extract tweets where search hits of Trump and Hillary match those of the top keywords on Google Trends. To that end, we will be scraping tweets from `@realDonaldTrump` and `@HillaryClinton`. This is easily done with either `twitteR` or `rtweet` by querying the info needed from the Twitter API. However, as of July 2018, a Twitter developer account needs to be made prior before we could provide a token to access the Twitter API. As of writing this paragraph, Hassan is waiting for his Twitter developer account to be approved.
 
-2) **Data visualization**
+For demonstration (and a backup dataset), we have obtained a dataset from [Kaggle](https://www.kaggle.com/benhamner/clinton-trump-tweets) of Trump's and Clinton's tweets from 01/01/2016 to 09/28/2016. Our then-scraped dataset will more or less look like the backup dataset. An overview of the dataset:
 
-Since we will be using a dataset that has many dimensions, visualizing them might be a problem. Due to that, our group decided to use the package `plotly` (whenever feasible) since it has a feature that allows us to visualize a 3d plot.
 
-```{r plotly 1, echo = F}
+|         Features        |           Description           |
+|-------------------------|---------------------------------|
+| handle                  | Twitter handle name             |
+| text                    | Tweets                          |
+| is_retweet              | Whether the tweet was retweeted |
+| original_author         | Original author                 |
+| time                    | Timestamp                       |
+| in_reply_to_screen_name | -                               |
+| in_reply_to_status_id   | -                               |
+| in_reply_to_user_id     | -                               |
+| is_quote_status         | Whether the tweet was quoted    |
+| lang                    | Twitter's guess at language     |
+| retweet_count           | Retweet count                   |
+| favorite_count          | Favorite count                  |
+| longitude               | Longitude                       |
+| latitude                | Latitude                        |
+| place_id                | Place id                        |
+| place_full_name         | Place full name                 |
+| place_name              | Place name                      |
+| place_type              | Place type                      |
+| place_country_code      | Country code                    |
+| place_country           | Country                         |
+| place_contained_within  | Place contained within          |
+| place_attributes        | Place attributes                |
+| place_bounding_box      | Place bounding box              |
+| source_url              | Tweet source url                |
+| truncated               | Whether it is truncated         |
+| entities                | a JSON object                   |
+| extended_entities       | Another JSON object             |
 
-kd = with(MASS::geyser, MASS::kde2d(duration, waiting, n = 50))
-plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface() %>% layout(title = "Geyser Surface Visualization of Waiting Time with plotly")
+The dimensions of the dataset:
 
+```{r data, echo = F}
+dim(tweets)
+```
+
+First five observations of both candidates:
+
+`@HillaryClinton`:
+
+```{r hillary, echo = F}
+
+tweets %>% .[tweets$handle == "HillaryClinton", ] %>% head(5)
 
 ```
 
-`Code Reference`: [plotly](https://plot.ly/r/3d-surface-plots/)
+`@realDonaldTrump`:
 
-Also, to provide a more crisp and modern look to data visualizations, we will be using `plotly` and `Shiny` for better data exploration.
+```{r trump, echo = F}
+
+tweets %>% .[tweets$handle == "realDonaldTrump", ] %>% head(5)
+
+```
+
+In sentiment analysis, we would treat the texts as a corpus object and clean them by using the function `tm_map()` from the `tm` package until we are only left with the sentiments.
+
+```{r creating corpus, echo = F}
+
+corpus = as.character(tweets[, "text"]) %>% VectorSource() %>% Corpus()
+
+corpus
+```
+
+```{r cleaning, results = "hide", warning= F}
+
+cleaned_corpus = tm_map(corpus, tolower) %>%
+  tm_map(PlainTextDocument) %>%
+  tm_map(removePunctuation) %>%
+  tm_map(removeNumbers) %>%
+  tm_map(removeWords, stopwords("english")) %>%
+  tm_map(stripWhitespace)
+
+cleaned_corpus
+
+```
+
+Alternatively, another approach is to use the `tidytext` or `quanteda` package to clean the corpus object.
+
+For this, since the labels are defined weekly, we have to make sure that the strings are concatenated weekly before only the sentiments are kept. To that end, we could achieve this by using the functional `tapply()` and the function `string_c` (from the `stringr` package) after we have processed the timestamps to become a `week` factor so that the variables match the labels.
 
 
-3) **Data merging**
+#### 2) Analyzing 
 
-Using this dataset alone to predict the election results may not be realistic. Afterall, more often than not, relying on sentiments alone often fall short in an argument. Due to that, we may be using some packages, like `rvest` or `twitteR`, to webscrape some of the further needed information like manifestos, state laws and size of constituencies. This will take a long time.
+After obtaining only the sentiments, we would transform them into a Document Term Matrix, which calculates the frequencies at which the sentiments appear at each observation.
 
-***
+For example, we have the following two texts:
 
-## Conclusion 
+```
+[1]
+"I like STAT432"
 
-Ideally, by utilizing methods within and outside the scope of Stat 432 course, this project will tell us how people's tweet opinions from the United States relate to the outcome of the country's most important election in 2016. We gratefully appreciate any guidance and suggestions from the instructor/TAs.
+[2]
+"I hate STAT432"
+```
+
+A document matrix would show:
+
+| id | I | hate | like | STAT432 |
+|----|---|------|------|---------|
+|  1 | 1 |   0  |   1  |    1    |
+|  2 | 1 |   1  |   0  |    1    |
+
+It is important that we only obtain the sentiments so that we could treat the frequencies as our predictors before performing our analysis.
+
+Furthermore, we would define a popularity vector $\mathbf{P}$
+
+
+
+
 
