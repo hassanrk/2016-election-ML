@@ -12,7 +12,7 @@ output:
 ***
 
 ```{r setup-chunk, message = FALSE, warning = FALSE, echo = F}
-pkg_list = c("tidyverse", "caret", "MASS", "tm", "tidytext", "syuzhet", "rtweet", "twitteR", "SnowballC", "devtools", "gtrendsR", "jsonlite", "rpart.plot", "pollstR", "RSentiment", "broom")
+pkg_list = c("tidyverse", "caret", "MASS", "tm", "tidytext", "syuzhet", "rtweet", "twitteR", "SnowballC", "devtools", "gtrendsR", "jsonlite", "rpart.plot", "pollstR", "RSentiment", "broom", "quanteda")
 mia_pkgs = pkg_list[!(pkg_list %in% installed.packages()[,"Package"])]
 if(length(mia_pkgs) > 0) install.packages(mia_pkgs)
 loaded_pkgs = lapply(pkg_list, require, character.only=TRUE)
@@ -99,6 +99,12 @@ A collection of packages for sentiment analysis.
 
 rtweet, TwitteR:
 Packages to scrape from Twitter API.
+
+broom:
+A package that summarizes key information about statistical objects in tidy tibbles for textual data.
+
+quanteda:
+A package for quantitative analysis of textual data
 
 ```
 
@@ -199,7 +205,7 @@ For this, since the labels are defined weekly, we have to make sure that the str
 
 #### 2) Analyzing the Textual Data
 
-After obtaining only the sentiments, we would transform them into a Document-Term Matrix, which calculates the frequencies at which the sentiments appear at each observation.
+After obtaining only the sentiments, we would transform them into a Document-Term Matrix, which calculates the frequencies at which the sentiments appear at each observation. A document-term matrix can be performed from `DocumentTermMatrix()` function from the `tm` package or the `cast_dtm()` function or `cast_dtm()` from `tidytext`, and that we will use whichever one is more "R-friendly", i.e. whose object is easier to transform to become R-readable so that we could perform an analysis with it.
 
 For example, we have the following two texts:
 
@@ -229,6 +235,91 @@ We would want to estimate $\mathbf{\hat{P}}$ using the sentiments as the predict
 
 (a) **Logistic Regression**
 
+Since the $\mathbf{P}$ vector is between 0 and 1 and that the popularity metric can be seen as a probability, we could perform a logistic regression to explore the trend of the search query. The `broom` package allows us to perform such task:
+
+```{r, echo = F, message = F}
+data("data_corpus_inaugural", package = "quanteda")
+
+library(dplyr)
+library(tidyr)
+
+freq_d = tidy(data_corpus_inaugural) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(Year, word) %>%
+  complete(Year, word, fill = list(n = 0)) %>%
+  group_by(Year) %>%
+  mutate(year_total = sum(n),
+         percent = n / year_total) %>%
+  ungroup()
+```
+
+
+```{r}
+logit1 = freq_d %>%
+  group_by(word) %>%
+  filter(sum(n) > 50) %>%
+  do(tidy(glm(cbind(n, year_total - n) ~ Year, data = .,
+              family = "binomial"))) %>%
+  ungroup() %>%
+  filter(term == "Year")
+
+logit1
+```
+
+The `broom` package allows us to produce a summary output of the frequency of each word from the logistic regression. We can this analysis to get the crests and troughs of the trends that we are interested in analyzing.
+
+(b) **Lasso or Ridge Regression**
+
+In the case when we come across the situation of the curse of dimensionality (when $p>n$, $rank(X)<p$) or when we belive the variables are highly correlated, then both lasso or ridge regressions could be used to solve these problems. 
+
+The Lasso regression allows us to do variable selection and estimation at the same time. However, the Lasso solution is not always unique if $rank(X)<p$, which means it could give an unstable solution for a subset of features, hence we will need to view the solution path of Lasso to find the optimal solution. The LARS algorithm from the `glmnet` package could help us in finding this path for any predictor matrix $X$.
+
+If we believe that some of the features do in fact have some effect on the prediction, then we will do a ridge regression to cater to this situation. However, the ridge regression may only shrink some of the coefficient estimates, which may not necessarily solve the curse of dimensionality, although we are guaranteed a stable solution. 
+
+To perform these regressions, we could use the same transformation using `broom` and perform the analyses using `lm.ridge()` function from `MASS` and `lasso()` from `glmnet` after tuning the penalty parameter.
+
+
+(c) Random Forest
+
+We could also do feature selection and estimation using the random forest algorithm from the `randomForest` package. To view the importance of the variables, we could do MeanDecreaseGini or MeanDecreaseAccuracy plot to see the effects of the variables on the prediction. We could attempt to tune the parameters prematurely for the `mtry` and `nodesize` arguments.
+
+(d) **Feature Selection: PCA**
+
+We could attempt to find the features that greatly affect the prediction. However, since we have features of only factor variables, computing the distance matrices may be a problem. As such , we could use the `FactoMineR` package to solve this problem. The package allows us choose the number of variables we would need using the `AFDM()` function.
+
+Optional (Spare Time): **Classification**
+
+If we have enough time, we could classify the tweets into any class we are interested in like "Trump vs Hillary", "Offensive vs Non-Offensive" and such.
+
+
+#### 3) Visualizing the Data
+
+> The greatest value of a picture is when it forces us to see what we never expected to see. 
+>
+> --- **John Tukey**
+
+We are most interested in predicting the trends overtime given our features, hence we will mainly produce time series plots and compare the prediction using the different methods that we have outlined. 
+
+Of course, we will include any other plots that we find interesting, as long as they are at most 3-dimensional plots. Ultimately, we will be following this philosophy:
+
+> Visualization is often used for evil - twisting insignificant data changes and making them look meaningful. ... . Present results clearly and honestly. If something isn't working, those reviewing the results need to know.
+> 
+> --- **John Tukey**
+
+***
+
+## Challenges
+
+The challenges that we will likely face are:
+
+i) **Noninvertibility**
+
+Since the document term matrix often times has more features than observations, we will likely encounter a problem when our objective function is unsolvable. Hence, we have to spend adequate time to perform feature selection or dimension reduction methods to solve the problem. Lasso regression will probably be our best bet since it almost always guarantees a solution in which $n>p$.
+
+ii) **Computing the distance matrix**
+
+As mentioned previously, calculating the distance matrix for this dataset may not be as simple as computing a Euclidean distance matrix since we are dealing with categorical variable. If we could determine that the features that we are dealing with could be classified as at least "integer-valued", then we would not need to worry about this problem.
 
 
 
