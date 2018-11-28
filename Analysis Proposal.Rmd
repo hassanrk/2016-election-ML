@@ -66,10 +66,36 @@ Another popular measure of public opinions are by using polls. To that end, we q
 ```{r pollster, eval = F}
 slug = "2016-general-election-trump-vs-clinton"
 polls = pollster_charts_polls(slug) %>% .[["content"]]
-
+trendlines = pollster_charts_trendlines(slug)[["content"]]
 
 ```
 
+```{r, echo = F, eval = F}
+
+# Scatterplot
+
+.data <- gather(polls, response, value,
+                Favorable, Unfavorable, Undecided) %>%
+  mutate(value = if_else(is.na(value), 0, value))
+ggplot() +
+  geom_point(data = .data,
+             aes(x = end_date, y = value, color = response),
+             alpha = 0.5) +
+  geom_smooth(data = .data, method = "loess", se = FALSE,
+              aes(x = end_date, y = value, color = response))
+
+# Trendlines
+
+ggplot() +
+  geom_point(data = .data,
+             mapping = aes(x = end_date, y = value, color = response),
+             alpha = 0.5) +
+  geom_line(data = trendlines,
+            mapping = aes(x = date, y = value, color = label), size = 1.5)
+
+
+
+```
 
 We hypothesize that these trends are invoked by the use of sentiments from both political candidates during their campaigns either through speech or social media. Using the trends as the labels and the sentiments as the features, we could attempt to build a model to find out their interactions.
 

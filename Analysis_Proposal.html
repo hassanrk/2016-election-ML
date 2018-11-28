@@ -1613,7 +1613,8 @@ plot(trend2)</code></pre>
 <p>The trends are calculated on a weekly basis. How these trends are calculated can be viewed <a href="https://support.google.com/trends/answer/4365533?hl=en">here</a>. We see that these trends look more similar around mid-campaign.</p>
 <p>Another popular measure of public opinions are by using polls. To that end, we queried <a href="https://elections.huffingtonpost.com/pollster">HuffPost Pollster</a>, a poll that aggregates every poll that claims to represent the population using <code>pollstR</code>.</p>
 <pre class="r"><code>slug = &quot;2016-general-election-trump-vs-clinton&quot;
-polls = pollster_charts_polls(slug) %&gt;% .[[&quot;content&quot;]]</code></pre>
+polls = pollster_charts_polls(slug) %&gt;% .[[&quot;content&quot;]]
+trendlines = pollster_charts_trendlines(slug)[[&quot;content&quot;]]</code></pre>
 <p>We hypothesize that these trends are invoked by the use of sentiments from both political candidates during their campaigns either through speech or social media. Using the trends as the labels and the sentiments as the features, we could attempt to build a model to find out their interactions.</p>
 <p>Some packages that we <strong>may</strong> use for this project:</p>
 <pre><code>tidyverse: 
@@ -1898,6 +1899,15 @@ logit1</code></pre>
 </div>
 <div id="challenges" class="section level2">
 <h2>Challenges</h2>
+<p>The challenges that we will likely face are:</p>
+<ol style="list-style-type: lower-roman">
+<li><strong>Noninvertibility</strong></li>
+</ol>
+<p>Since the document term matrix often times has more features than observations, we will likely encounter a problem when our objective function is unsolvable. Hence, we have to spend adequate time to perform feature selection or dimension reduction methods to solve the problem. Lasso regression will probably be our best bet since it almost always guarantees a solution in which <span class="math inline">\(n&gt;p\)</span>.</p>
+<ol start="2" style="list-style-type: lower-roman">
+<li><strong>Computing the distance matrix</strong></li>
+</ol>
+<p>As mentioned previously, calculating the distance matrix for this dataset may not be as simple as computing a Euclidean distance matrix since we are dealing with categorical variable. If we could determine that the features that we are dealing with could be classified as at least “integer-valued”, then we would not need to worry about this problem.</p>
 </div>
 </div>
 
