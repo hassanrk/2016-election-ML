@@ -197,9 +197,9 @@ Alternatively, another approach is to use the `tidytext` or `quanteda` package t
 For this, since the labels are defined weekly, we have to make sure that the strings are concatenated weekly before only the sentiments are kept. To that end, we could achieve this by using the functional `tapply()` and the function `string_c` (from the `stringr` package) after we have processed the timestamps to become a `week` factor so that the variables match the labels.
 
 
-#### 2) Analyzing 
+#### 2) Analyzing the Textual Data
 
-After obtaining only the sentiments, we would transform them into a Document Term Matrix, which calculates the frequencies at which the sentiments appear at each observation.
+After obtaining only the sentiments, we would transform them into a Document-Term Matrix, which calculates the frequencies at which the sentiments appear at each observation.
 
 For example, we have the following two texts:
 
@@ -211,7 +211,7 @@ For example, we have the following two texts:
 "I hate STAT432"
 ```
 
-A document matrix would show:
+A document-term matrix would show:
 
 | id | I | hate | like | STAT432 |
 |----|---|------|------|---------|
@@ -220,7 +220,14 @@ A document matrix would show:
 
 It is important that we only obtain the sentiments so that we could treat the frequencies as our predictors before performing our analysis.
 
-Furthermore, we would define a popularity vector $\mathbf{P}$
+Furthermore, we would define a popularity vector $\mathbf{P}$ as
+
+$$\mathbf{P} = \frac{|\{w_i : w_i \in W\} |_t}{|W|_t} \in \{[0, 1]\}_{t=1}^n$$
+, which is approximately how the Google Trend's search hits are defined after adjusting for time.
+
+We would want to estimate $\mathbf{\hat{P}}$ using the sentiments as the predictors. We could perform a few analyses with this setup:
+
+(a) **Logistic Regression**
 
 
 
