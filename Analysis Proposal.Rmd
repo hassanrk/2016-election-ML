@@ -54,7 +54,10 @@ plot(trend1)
 Lo and behold, the trends do not differ much when we queried for Trump and Hillary.
 
 ```{r trend 2, cache = T}
-trend2 = gtrends(c("hillary", "trump"), geo = "US", time = "2016-01-01 2016-12-31")
+trend2 = gtrends(c("hillary", "trump"), geo = "US", time = "2016-01-01 2016-09-28")
+
+
+trend2$interest_over_time
 
 plot(trend2)
 ```
