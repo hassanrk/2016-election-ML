@@ -1,44 +1,36 @@
-# Sentiment and Predictive Analyses of 2016 Election based on Social Media
+# Sentiment Analysis on Political Tweets and Predicting Google Trends Search Queries
 
 ***
 
-[Link to Data Source](https://www.kaggle.com/kinguistics/election-day-tweets/kernels)
+[Link to Data Source](https://www.kaggle.com/benhamner/clinton-trump-tweets)
 
-[Link to CSV File](https://drive.google.com/drive/folders/167CxGqwEPn2q9OevOQqy2rXenQ-L_sZF)
 
-|            Variable           | Description                                                                                                                   |
-|:-----------------------------:|-------------------------------------------------------------------------------------------------------------------------------|
-|              text             | text of the tweet                                                                                                             |
-|           created_at          | date and time of the tweet (format yyyy-mm--dd hh:mm:ss)                                                                      |
-|              geo              | a JSON object containing coordinates [latitude, longitude] and a "type"                                                       |
-|              lang             | Twitter's guess as to the language of the tweet                                                                               |
-|             place             | a Place object from the Twitter API                                                                                           |
-|          coordinates          | a JSON object containing coordinates [longitude, latitude] and a `type'; note that coordinates are reversed from the geofield |
-|     user.favourites.count     | number of tweets the user has favorited                                                                                       |
-|      user.statuses_count      | number of statuses the user has posted                                                                                        |
-|        user.description       | the text of the user's profile description                                                                                    |
-|         user.location         | text of the user's profile location                                                                                           |
-|            user.id            | unique id for the user                                                                                                        |
-|        user.created_at        | when the user created their account                                                                                           |
-|         user.verified         | bool; is user verified?                                                                                                       |
-|         user.following        | bool; am I (Ed King - the data creator) following this user?                                                                  |
-|            user.url           | the URL that the user listed in their profile (not necessarily a link to their Twitter profile)                               |
-|       user.listed_count       | number of lists this user is on (?)                                                                                           |
-|      user.followers_count     | number of accounts that follow this user                                                                                      |
-|   user.default_profile_image  | bool; does the user use the default profile pic?                                                                              |
-|        user.utc_offset        | positive or negative distance from UTC, in seconds                                                                            |
-|       user.friends_count      | number of accounts this user follows                                                                                          |
-|      user.default_profile     | bool; does the user use the default profile?                                                                                  |
-|           user.name           | user's profile name                                                                                                           |
-|           user.lang           | user's default language                                                                                                       |
-|        user.screen_name       | user's account name                                                                                                           |
-|        user.geo_enabled       | bool; does user have geo enabled?                                                                                             |
-| user.profile_background_color | user's profile background color, as hex in format "RRGGBB" (no '#')                                                           |
-|     user.profile_image_url    | a link to the user's profile pic                                                                                              |
-|         user.time_zone        | full name of the user's time zone                                                                                             |
-|               id              | unique tweet ID                                                                                                               |
-|         favorite_count        | number of times the tweet has been favorited                                                                                  |
-|           retweeted           | bool; is this a retweet?                                                                                                      |
-|             source            | if a link, where is it from (e.g., "Instagram")                                                                               |
-|           favorited           | have I (Ed King - data creator) favorited this tweet?                                                                         |
-|         retweet_count         | number of times this tweet has been retweeted         |
+|         Features        |           Description           |
+|-------------------------|---------------------------------|
+| handle                  | Twitter handle name             |
+| text                    | Tweets                          |
+| is_retweet              | Whether the tweet was retweeted |
+| original_author         | Original author                 |
+| time                    | Timestamp                       |
+| in_reply_to_screen_name | -                               |
+| in_reply_to_status_id   | -                               |
+| in_reply_to_user_id     | -                               |
+| is_quote_status         | Whether the tweet was quoted    |
+| lang                    | Twitter's guess at language     |
+| retweet_count           | Retweet count                   |
+| favorite_count          | Favorite count                  |
+| longitude               | Longitude                       |
+| latitude                | Latitude                        |
+| place_id                | Place id                        |
+| place_full_name         | Place full name                 |
+| place_name              | Place name                      |
+| place_type              | Place type                      |
+| place_country_code      | Country code                    |
+| place_country           | Country                         |
+| place_contained_within  | Place contained within          |
+| place_attributes        | Place attributes                |
+| place_bounding_box      | Place bounding box              |
+| source_url              | Tweet source url                |
+| truncated               | Whether it is truncated         |
+| entities                | a JSON object                   |
+| extended_entities       | Another JSON object             |
